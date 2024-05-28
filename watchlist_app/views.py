@@ -5,7 +5,10 @@ from watchlist_app.serializers import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, mixins, generics, viewsets
+from rest_framework.validators import ValidationError
 
+# for apiview(it is get,post,put,delete)
+#
 class WatchListAV(APIView):
     def get_query_set(self):
         return WatchList.objects.all()
@@ -50,51 +53,51 @@ class WatchDetailDV(APIView):
         instance.delete()
         return Response({"message": "Deleted Successfully."}, status=status.HTTP_200_OK)
 
-class StreamingPlatformAV(APIView):
-    def get_query_set(self):
-        return StreamingPlatform.objects.all()
+# class StreamingPlatformAV(APIView):
+#     def get_query_set(self):
+#         return StreamingPlatform.objects.all()
     
-    def get(self, request):
-        try:
-            query_set = self.get_query_set()
-            serializer = StreamingPlatformSerializer(query_set, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except StreamingPlatform.DoesNotExist:
-            raise Http404
+#     def get(self, request):
+#         try:
+#             query_set = self.get_query_set()
+#             serializer = StreamingPlatformSerializer(query_set, many=True)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         except StreamingPlatform.DoesNotExist:
+#             raise Http404
         
-    def post(self, request):
-        serializer = StreamingPlatformSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     def post(self, request):
+#         serializer = StreamingPlatformSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class StreamingPlatformDV(APIView):
-    def get_query_set(self):
-        return StreamingPlatform.objects.all()
+# class StreamingPlatformDV(APIView):
+#     def get_query_set(self):
+#         return StreamingPlatform.objects.all()
     
-    def get(self, request, pk):
-        try:
-            instance = self.get_query_set().get(pk=pk)
-            serializer = StreamingPlatformSerializer(instance)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except StreamingPlatform.DoesNotExist:
-            raise Http404
+#     def get(self, request, pk):
+#         try:
+#             instance = self.get_query_set().get(pk=pk)
+#             serializer = StreamingPlatformSerializer(instance)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         except StreamingPlatform.DoesNotExist:
+#             raise Http404
         
-    def put(self, request, pk):
-        instance = self.get_query_set().get(pk=pk)
-        serializer = StreamingPlatformSerializer(instance, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     def put(self, request, pk):
+#         instance = self.get_query_set().get(pk=pk)
+#         serializer = StreamingPlatformSerializer(instance, data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, pk):
-        instance = self.get_query_set().get(pk=pk)
-        instance.delete()
-        return Response({"message": "Deleted Successfully."}, status=status.HTTP_200_OK)
+#     def delete(self, request, pk):
+#         instance = self.get_query_set().get(pk=pk)
+#         instance.delete()
+#         return Response({"message": "Deleted Successfully."}, status=status.HTTP_200_OK)
     
-
+# viewsets.ViewSet
 
 # class StreamingPlatformVS(viewsets.ViewSet):
 
@@ -114,13 +117,19 @@ class StreamingPlatformVS(viewsets.ModelViewSet):
     serializer_class = StreamingPlatformSerializer
 
 class ReviewCreate(generics.CreateAPIView):
+    queryset = Reviews.objects.all()
     serializer_class = ReviewsSerializer
     
     def perform_create(self, serializer):
         pk = self.kwargs.get('pk')
         watchlist = WatchList.objects.get(pk=pk)
+
+        user = self.request.user
+        review_exists = Reviews.objects.filter(watchlist=watchlist, review_user=user)
+        if review_exists.exists():
+            raise ValidationError("You have already reviewed this movie.")
         
-        serializer.save(watchlist=watchlist)
+        serializer.save(watchlist=watchlist, review_user=user)
 
 class ReviewList(generics.ListAPIView):
     serializer_class = ReviewsSerializer
