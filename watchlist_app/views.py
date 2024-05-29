@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, mixins, generics, viewsets
 from rest_framework.validators import ValidationError
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from .permissions import *
 
 # for apiview(it is get,post,put,delete)
 #
@@ -129,10 +131,22 @@ class ReviewCreate(generics.CreateAPIView):
         if review_exists.exists():
             raise ValidationError("You have already reviewed this movie.")
         
+        if watchlist.total_reviews == 0:
+            watchlist.average_rating = serializer.validated_data['rating']
+        else:
+            watchlist.average_rating = (watchlist.average_rating + serializer.validated_data['rating'])/2
+
+        watchlist.total_reviews = watchlist.total_reviews + 1
+        print('average rating: %s' % watchlist.average_rating)
+        print('total reviews: %s' % watchlist.total_reviews)
+        watchlist.save()
+        
         serializer.save(watchlist=watchlist, review_user=user)
 
 class ReviewList(generics.ListAPIView):
     serializer_class = ReviewsSerializer
+    # permission_classes = [IsAuthenticated] # for object based permissions
+    permission_classes = [AdminOrReadOnly] # for object based permissions & this means authenyticated users can edit ,acces..unaunthenticated users can only read them.
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
@@ -142,7 +156,26 @@ class ReviewList(generics.ListAPIView):
 class ReviewDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Reviews.objects.all()
     serializer_class = ReviewsSerializer
+    # permission_classes = [IsAuthenticated] # for object based permissions
+    permission_classes = [AdminOrReadOnly] # for object based permissions & this means authenyticated users can edit ,acces..unaunthenticated users can only read them.
 
+    def perform_destroy(self, instance):
+        watchlist = instance.watchlist
+
+        watchlist.total_reviews -=1
+        if watchlist.total_reviews > 0:
+            current_total_rating = watchlist.average_rating * watchlist.total_reviews
+            updated_total_rating = current_total_rating - instance.rating
+            watchlist.average_rating = updated_total_rating / watchlist.total_reviews
+        else:
+            # If there are no reviews left, reset the average rating to 0
+            watchlist.average_rating = 0
+
+        # Save the updated WatchList object
+        watchlist.save()
+
+        # Delete the review
+        instance.delete()
     
 # class ReviewList(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
 
