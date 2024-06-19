@@ -146,12 +146,11 @@ class ReviewCreate(generics.CreateAPIView):
 class ReviewList(generics.ListAPIView):
     serializer_class = ReviewsSerializer
     # permission_classes = [IsAuthenticated] # for object based permissions
-    permission_classes = [AdminOrReadOnly] # for object based permissions & this means authenyticated users can edit ,acces..unaunthenticated users can only read them.
+    permission_classes = [IsAuthenticated] # for object based permissions & this means authenyticated users can edit ,acces..unaunthenticated users can only read them.
 
     def get_queryset(self):
         pk = self.kwargs.get('pk')
-        return Reviews.objects.filter(watchlist=pk)
-        
+        return Reviews.objects.filter(watchlist=pk)      
 
 class ReviewDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Reviews.objects.all()
@@ -176,28 +175,4 @@ class ReviewDetail(generics.RetrieveUpdateDestroyAPIView):
 
         # Delete the review
         instance.delete()
-    
-# class ReviewList(mixins.ListModelMixin, mixins.CreateModelMixin, generics.GenericAPIView):
-
-#     queryset =  Reviews.objects.all()
-#     serializer_class = ReviewsSerializer
-
-#     def get(self, request, *args, **kwargs):
-#         return self.list(request, *args, **kwargs)
-    
-#     def post(self, request, *args, **kwargs):
-#         return self.create(request, *args, **kwargs)
-    
-# class ReviewDetail(mixins.DestroyModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, generics.GenericAPIView):
-
-#     queryset =  Reviews.objects.all()
-#     serializer_class = ReviewsSerializer
-
-#     def get(self, request, *args, **kwargs):
-#         return self.retrieve(request, *args, **kwargs)
-    
-#     def put(self, request, *args, **kwargs):
-#         return self.update(request, *args, **kwargs)
-    
-#     def delete(self, request, *args, **kwargs):
-#         return self.destroy(request, *args, **kwargs)
+ 
